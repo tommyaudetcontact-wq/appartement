@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Brawl Tasks - Appartement</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -53,13 +53,13 @@
 
         canvas { display: block; width: 100vw; height: 100vh; background: #1e1e1e; }
 
-        /* HUD BESOINS MOBILE - PLACÉ EN HAUT À GAUCHE SANS CHEVAUCHEMENT */
+        /* HUD BESOINS MOBILE - EN HAUT À GAUCHE */
         #sims-hud {
             position: absolute; top: 10px; left: 10px;
             background: rgba(10, 5, 25, 0.85);
             border: 2px solid #000; border-radius: 12px;
             padding: 6px 10px; box-shadow: 0px 4px 0px #000;
-            z-index: 15; width: 135px; pointer-events: none;
+            z-index: 15; width: 130px; pointer-events: none;
         }
         .need-bar-container {
             background: #222; border: 1px solid #000; border-radius: 4px;
@@ -68,11 +68,17 @@
         .need-bar-fill { height: 100%; width: 100%; transition: width 0.2s linear; }
         .need-label { font-size: 0.6rem; font-weight: 900; margin-bottom: 1px; display: flex; justify-content: space-between; }
 
-        /* BOUTON ACTION CONTEXTUEL */
+        /* BOUTON ACTION CONTEXTUEL - DÉPLACÉ EN BAS AU-DESSUS DU JOYSTICK */
         #interaction-prompt {
-            position: absolute; top: 65px; left: 50%;
-            transform: translateX(-50%); z-index: 25; display: none;
-            flex-direction: column; align-items: center; gap: 4px;
+            position: absolute; 
+            bottom: calc(150px + env(safe-area-inset-bottom, 0px)); 
+            left: 50%;
+            transform: translateX(-50%); 
+            z-index: 25; 
+            display: none;
+            flex-direction: column; 
+            align-items: center; 
+            gap: 4px;
             pointer-events: auto;
         }
         .action-progress-container {
@@ -82,12 +88,12 @@
         }
         .action-progress-fill { height: 100%; width: 0%; background: var(--brawl-green); transition: width 0.05s linear; }
 
-        /* MENUS HAUT DROITE RESPONSIVE - AUCUNE SUPERPOSITION SUR LES BESOINS */
+        /* MENUS BOUTONS HAUT DROITE RESPONSIVE */
         .top-right-menu {
             position: absolute; top: 10px; right: 10px;
             z-index: 20; display: flex; gap: 4px; align-items: center;
             pointer-events: auto; flex-wrap: wrap; justify-content: flex-end;
-            max-width: calc(100vw - 155px);
+            max-width: calc(100vw - 150px);
         }
         .brawl-btn {
             font-family: 'Luckiest Guy', cursive; color: white !important;
@@ -102,26 +108,42 @@
         .btn-green { background-color: var(--brawl-green); }
         .btn-blue { background-color: var(--brawl-blue); }
 
-        /* JOYSTICK MOBILE */
+        /* JOYSTICK MOBILE REHAUSSÉ POUR ÊTRE 100% VISIBLE */
         #joystick-container {
-            position: absolute; width: 110px; height: 120px;
-            border-radius: 50%; background: rgba(255, 255, 255, 0.15);
-            border: 3px solid rgba(255, 255, 255, 0.4);
+            position: absolute; 
+            width: 100px; height: 100px;
+            border-radius: 50%; background: rgba(255, 255, 255, 0.2);
+            border: 3px solid rgba(255, 255, 255, 0.5);
             z-index: 20; touch-action: none; pointer-events: auto;
         }
-        @media (orientation: portrait) { #joystick-container { bottom: 20px; left: 50%; transform: translateX(-50%); } }
-        @media (orientation: landscape) { #joystick-container { bottom: 20px; left: 20px; transform: none; } }
+
+        /* Positionnement Portrait vs Paysage */
+        @media (orientation: portrait) { 
+            #joystick-container { 
+                bottom: calc(40px + env(safe-area-inset-bottom, 0px)); 
+                left: 50%; 
+                transform: translateX(-50%); 
+            } 
+        }
+        @media (orientation: landscape) { 
+            #joystick-container { 
+                bottom: calc(30px + env(safe-area-inset-bottom, 0px)); 
+                left: 30px; 
+                transform: none; 
+            } 
+        }
 
         #joystick-knob {
             position: absolute; top: 50%; left: 50%;
-            width: 45px; height: 45px; margin-top: -22.5px; margin-left: -22.5px;
+            width: 44px; height: 45px; 
+            margin-top: -22px; margin-left: -22px;
             border-radius: 50%; background: var(--brawl-blue); border: 2px solid #fff;
             box-shadow: 0px 4px 8px rgba(0,0,0,0.5); pointer-events: none;
         }
 
-        /* PANNEAU DE CONTRÔLE MEUBLE - REPLACÉ EN HAUT AU CENTRE POUR ÊTRE TOUJOURS VISIBLE SUR MOBILE */
+        /* CONTRÔLES PLACEMENT MEUBLE */
         #editor-controls-hud {
-            position: absolute; top: 110px; left: 50%;
+            position: absolute; top: 80px; left: 50%;
             transform: translateX(-50%);
             background: rgba(10, 5, 25, 0.95); border: 2px solid var(--brawl-yellow);
             border-radius: 12px; padding: 6px 10px; display: none; gap: 6px;
@@ -135,7 +157,7 @@
             border-radius: 15px; padding: 10px; z-index: 20; display: none; pointer-events: auto;
         }
 
-        /* MODALE BOUTIQUE PLEIN ÉCRAN AVEC SCROLLING TACTILE CORRIGÉ */
+        /* MODALE BOUTIQUE PLEIN ÉCRAN */
         .shop-modal.modal { padding: 0 !important; }
         .shop-modal .modal-dialog { 
             max-width: 100vw !important; width: 100vw !important; 
@@ -157,7 +179,6 @@
         }
         .category-stack .btn { width: 100%; text-align: center; font-size: 1rem; padding: 8px; }
 
-        /* ZONE DES ARTICLES SCROLLABLE SUR MOBILE */
         #shopContainer {
             overflow-y: auto !important;
             touch-action: pan-y !important;
@@ -217,6 +238,7 @@
             <div class="need-bar-container"><div id="barHygiene" class="need-bar-fill bg-success" style="width: 100%;"></div></div>
         </div>
 
+        <!-- BOUTON D'INTERACTION REPLACÉ AU-DESSUS DU JOYSTICK -->
         <div id="interaction-prompt">
             <button id="btnInteraction" onclick="executerInteraction()" class="btn brawl-btn btn-green">
                 [E] CUISINER & MANGER 🍳
@@ -226,7 +248,7 @@
             </div>
         </div>
 
-        <!-- MENU BOUTONS HAUT DROITE SANS CHEVAUCHEMENT -->
+        <!-- MENU BOUTONS HAUT DROITE -->
         <div class="top-right-menu">
             <span id="netRoleBadge" class="badge bg-warning text-dark brawl-font px-2 py-1" style="border: 1px solid #000; font-size: 0.65rem;">MON APPART 🏠</span>
             <button onclick="ouvrirListeJoueursEnLigne()" class="btn brawl-btn btn-green">🌐 JOUEURS</button>
@@ -236,7 +258,7 @@
             <button onclick="retournerAuMenuPrincipal()" class="btn brawl-btn btn-pink">🏠 MENU</button>
         </div>
 
-        <!-- CONTRÔLES PLACEMENT MEUBLE REPLACÉS EN HAUT AU CENTRE -->
+        <!-- CONTRÔLES PLACEMENT MEUBLE -->
         <div id="editor-controls-hud">
             <button onclick="ajusterTailleMeuble(0.1)" class="btn brawl-btn btn-yellow">🔍 +</button>
             <button onclick="ajusterTailleMeuble(-0.1)" class="btn brawl-btn btn-yellow">🔍 -</button>
@@ -261,7 +283,7 @@
         </div>
     </div>
 
-    <!-- MODALE BOUTIQUE SCROLLABLE SUR MOBILE -->
+    <!-- MODALE BOUTIQUE SCROLLABLE -->
     <div class="modal fade shop-modal" id="shopModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -438,7 +460,7 @@
             let dx = touch.clientX - centerX;
             let dy = touch.clientY - centerY;
             let dist = Math.hypot(dx, dy);
-            let maxRadius = 45;
+            let maxRadius = 38;
 
             if (dist > 0) {
                 let clampedDist = Math.min(dist, maxRadius);
