@@ -1,19 +1,23 @@
 // ==========================================
-// MODULE ÉDITEUR & BOUTIQUE (Meubles, Sols, Skins)
+// MODULE ÉDITEUR & BOUTIQUE (Meubles, Sols, Skins, Murs, Fenêtres)
 // ==========================================
 
 let modeEditeur = false;
 let shopModalInst = null;
 let meubleEnModePlacement = null;
 let texturePlancherSelectionnee = null;
+
 let pieceCibleEdition = null;
+let murCibleEdition = null;
 
 let permissionEditionInvite = false;
 
-// Variables pour le solde, les achats et les skins
+// Variables pour le solde, les achats, skins, papiers peints et fenêtres
 let argentJoueur = 0;
 let itemsDebloques = [];
 let skinEquipe = null;
+let papiersPeintsMurs = {}; // Ex: { mur_nord: { url: '...', scale: 1 } }
+let fenetresMurs = [];      // Ex: [ { id: '...', murId: 'mur_nord', x: 200, y: 10, w: 40, h: 40, url: '...' } ]
 
 function peutEditer() {
     return isHost || permissionEditionInvite;
@@ -60,7 +64,6 @@ function basculerPermissionInvite() {
     });
 }
 
-// OUVRE LA BOUTIQUE DIRECTEMENT SUR L'ÉCRAN DES CATÉGORIES
 function ouvrirBoutique() {
     if (!peutEditer()) {
         alert("🔒 L'hôte n'a pas autorisé la modification de l'appartement.");
@@ -75,7 +78,6 @@ function ouvrirBoutique() {
     });
 }
 
-// BASCULE VERS L'ÉCRAN DES CATÉGORIES
 function afficherEcranCategories() {
     let catScreen = document.getElementById('shopCategoriesScreen');
     let itemScreen = document.getElementById('shopItemsScreen');
@@ -88,7 +90,6 @@ function afficherEcranCategories() {
     if (titleHeader) titleHeader.innerText = "🛍️ BOUTIQUE";
 }
 
-// CLIC SUR UNE CATÉGORIE : PASSE EN PLEIN ÉCRAN SUR LES ITEMS
 function ouvrirCategorieBoutique(nomDossier, nomTitre) {
     let catScreen = document.getElementById('shopCategoriesScreen');
     let itemScreen = document.getElementById('shopItemsScreen');
@@ -131,12 +132,14 @@ function misaJourAffichageArgent() {
     if (elHud) elHud.innerText = `${argentJoueur.toFixed(2)} $`;
 }
 
+// FIX PRIX PAR DÉFAUT : 2.00 $ POUR LES FENÊTRES ET MEUBLES, 30.00 $ POUR LES SKINS
 function extrairePrixEtNom(fileName, isSkin = false) {
     let nomSansExtension = fileName.replace(/\.[^/.]+$/, "");
     let nomPropre = nomSansExtension.replace(/^\$[\d\.]+\s*/, "");
 
     let match = fileName.match(/^\$([\d\.]+)/);
-    let prixCalcule = match ? parseFloat(match[1]) : (isSkin ? 30.0 : 2.0);
+    let prixDefaut = isSkin ? 30.0 : 2.0;
+    let prixCalcule = match ? parseFloat(match[1]) : prixDefaut;
 
     return {
         prix: prixCalcule,
@@ -168,7 +171,7 @@ function chargerSkinsGitHub() {
 
             dossiersSkins.forEach(d => {
                 let skinName = d.name;
-                let previewImgUrl = `${ASSETS_BASE_URL}skins/${skinName}/${skinName}Face1.png`;
+                let previewImgUrl = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${REPO_SPRITES}/main/skins/${encodeURIComponent(skinName)}/${encodeURIComponent(skinName)}Face1.png`;
                 let info = extrairePrixEtNom(skinName, true);
                 let itemKey = "skin_" + skinName;
                 let estAchete = itemsDebloques.includes(itemKey) || itemsDebloques.includes(skinName);
@@ -270,21 +273,28 @@ function chargerDossierGitHub(nomDossier) {
     let container = document.getElementById('shopContainer');
     container.innerHTML = `<div class="col-12 text-warning py-4 fw-bold fs-5 text-center">⏳ Chargement des articles...</div>`;
 
-    let urlApiGithub = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_SPRITES}/contents/${nomDossier}`;
+    let urlApiGithub = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_SPRITES}/contents/${encodeURIComponent(nomDossier)}`;
 
     fetch(urlApiGithub)
         .then(res => res.json())
         .then(fichiers => {
             container.innerHTML = "";
             if (!Array.isArray(fichiers)) {
-                container.innerHTML = `<div class="col-12 text-muted py-4 text-center">Aucun contenu trouvé.</div>`;
+                container.innerHTML = `<div class="col-12 text-muted py-4 text-center">Aucun contenu trouvé dans le dossier "${nomDossier}".</div>`;
                 return;
             }
 
-            let images = fichiers.filter(f => f.name.match(/\.(png|jpe?g)$/i));
+            let images = fichiers.filter(f => f.name.match(/\.(png|jpe?g|webp|svg|gif)$/i));
+
+            if (images.length === 0) {
+                container.innerHTML = `<div class="col-12 text-muted py-4 text-center">Aucune image trouvée dans le dossier "${nomDossier}".</div>`;
+                return;
+            }
 
             images.forEach(f => {
-                let imgPagesUrl = `${ASSETS_BASE_URL}${nomDossier}/${f.name}`;
+                // Utilise le lien direct Raw GitHub pour éviter les erreurs 404 du CDN
+                let imgDirectUrl = f.download_url || `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${REPO_SPRITES}/main/${encodeURIComponent(nomDossier)}/${encodeURIComponent(f.name)}`;
+                
                 let info = extrairePrixEtNom(f.name, false);
                 let estAchete = info.prix === 0 || itemsDebloques.includes(f.name);
 
@@ -292,28 +302,28 @@ function chargerDossierGitHub(nomDossier) {
                 let actionBtn = '';
 
                 if (estAchete) {
-                    let label = nomDossier === 'plancher' ? 'ÉDITER 🪵' : 'PLACER 🛋️';
-                    let btnColor = nomDossier === 'plancher' ? 'btn-blue' : 'btn-yellow';
-                    actionBtn = `<button class="btn brawl-btn ${btnColor} btn-lg w-100 mt-2" onclick="selectionnerItem('${imgPagesUrl}', '${f.name}', '${nomDossier}')">${label}</button>`;
+                    let label = (nomDossier === 'plancher' || nomDossier === 'murs') ? 'ÉDITER 🪵' : 'PLACER 🛋️';
+                    let btnColor = (nomDossier === 'plancher' || nomDossier === 'murs') ? 'btn-blue' : 'btn-yellow';
+                    actionBtn = `<button class="btn brawl-btn ${btnColor} btn-lg w-100 mt-2" onclick="selectionnerItem('${imgDirectUrl}', '${f.name}', '${nomDossier}')">${label}</button>`;
                 } else {
                     let canAfford = argentJoueur >= info.prix;
                     let btnClass = canAfford ? 'btn-green' : 'btn-pink disabled';
-                    actionBtn = `<button class="btn brawl-btn ${btnClass} btn-lg w-100 mt-2" onclick="acheterEtPlacer('${imgPagesUrl}', '${f.name}', '${nomDossier}', ${info.prix})">ACHETER 🛒 (${info.prix} $)</button>`;
+                    actionBtn = `<button class="btn brawl-btn ${btnClass} btn-lg w-100 mt-2" onclick="acheterEtPlacer('${imgDirectUrl}', '${f.name}', '${nomDossier}', ${info.prix})">ACHETER 🛒 (${info.prix} $)</button>`;
                 }
 
                 container.innerHTML += `
                     <div class="col">
                         <div class="${cardClass}">
                             ${!estAchete ? `<div class="lock-badge">🔒 ${info.prix} $</div>` : ''}
-                            <img src="${imgPagesUrl}" class="meuble-img-preview">
-                            <div class="fw-bold text-white text-truncate fs-6">${info.nomPropre}</div>
+                            <img src="${imgDirectUrl}" class="meuble-img-preview">
+                            <div class="fw-bold text-white text-truncate fs-6 text-center">${info.nomPropre}</div>
                             ${actionBtn}
                         </div>
                     </div>`;
             });
         })
         .catch(err => {
-            container.innerHTML = `<div class="col-12 text-danger py-4 text-center">⚠️ Erreur de chargement.</div>`;
+            container.innerHTML = `<div class="col-12 text-danger py-4 text-center">⚠️ Erreur de chargement du dossier "${nomDossier}".</div>`;
         });
 }
 
@@ -353,12 +363,24 @@ function selectionnerItem(urlImage, nom, dossier) {
     if (dossier === 'plancher') {
         texturePlancherSelectionnee = urlImage;
         pieceCibleEdition = null;
+        murCibleEdition = null;
         document.getElementById('editor-preview-img').src = urlImage;
-        document.getElementById('editor-target-name').innerText = "Pièce : Cliquez sur une pièce";
+        document.getElementById('editor-target-name').innerText = "Sol : Cliquez sur une pièce";
         document.getElementById('editor-panel').style.display = 'block';
         document.getElementById('editor-controls-hud').style.display = 'none';
         mettreAJourAperçuSlider();
-    } else {
+    } 
+    else if (dossier === 'murs' || dossier === 'mur' || dossier === 'tapisserie') {
+        texturePlancherSelectionnee = urlImage;
+        pieceCibleEdition = null;
+        murCibleEdition = null;
+        document.getElementById('editor-preview-img').src = urlImage;
+        document.getElementById('editor-target-name').innerText = "Mur : Cliquez sur un mur";
+        document.getElementById('editor-panel').style.display = 'block';
+        document.getElementById('editor-controls-hud').style.display = 'none';
+        mettreAJourAperçuSlider();
+    } 
+    else {
         let testImg = new Image();
         testImg.crossOrigin = "Anonymous";
         testImg.onload = function() {
@@ -367,19 +389,15 @@ function selectionnerItem(urlImage, nom, dossier) {
             let w = maxDim;
             let h = maxDim;
 
-            if (ratio > 1) {
-                h = maxDim / ratio;
-            } else {
-                w = maxDim * ratio;
-            }
+            if (ratio > 1) { h = maxDim / ratio; } 
+            else { w = maxDim * ratio; }
 
             meubleEnModePlacement = {
                 id: Date.now() + "_" + Math.random().toString(36).substr(2, 4),
                 type: dossier,
                 url: urlImage, 
                 nom: nom,
-                w: w, 
-                h: h,
+                w: w, h: h,
                 aspectRatio: ratio,
                 scale: 1.0, 
                 rotation: 0,
@@ -391,6 +409,8 @@ function selectionnerItem(urlImage, nom, dossier) {
 
             afficherControlesPlacement();
         };
+
+        // Chargement direct du sprite
         testImg.src = urlImage;
     }
 
@@ -521,31 +541,27 @@ function mettreAJourAperçuSlider() {
 function fermerEditeurSol() {
     texturePlancherSelectionnee = null;
     pieceCibleEdition = null;
+    murCibleEdition = null;
     document.getElementById('editor-panel').style.display = 'none';
 }
 
 function appliquerPlancherFinal() {
     if (!texturePlancherSelectionnee) return;
-    if (!pieceCibleEdition) {
-        alert("Cliquez sur une pièce pour appliquer le sol !");
-        return;
-    }
 
     let sliderVal = parseFloat(document.getElementById('tileSizeSlider').value);
     let scaleRatio = sliderVal / 100.0;
+    let textData = { url: texturePlancherSelectionnee, scale: scaleRatio };
 
-    let textData = {
-        url: texturePlancherSelectionnee,
-        scale: scaleRatio
-    };
-
-    planchersPieces[pieceCibleEdition.id] = textData;
-
-    envoyerDonneesMulti({ 
-        type: 'PLANCHER_UPDATE', 
-        pieceId: pieceCibleEdition.id, 
-        texture: textData 
-    });
+    if (pieceCibleEdition) {
+        planchersPieces[pieceCibleEdition.id] = textData;
+        envoyerDonneesMulti({ type: 'PLANCHER_UPDATE', pieceId: pieceCibleEdition.id, texture: textData });
+    } else if (murCibleEdition) {
+        papiersPeintsMurs[murCibleEdition.id] = textData;
+        envoyerDonneesMulti({ type: 'MUR_UPDATE', murId: murCibleEdition.id, texture: textData });
+    } else {
+        alert("Cliquez sur une pièce ou un mur pour appliquer la texture !");
+        return;
+    }
 
     sauvegarderAppartementDansSheet();
     fermerEditeurSol();
@@ -558,7 +574,9 @@ function sauvegarderAppartementDansSheet() {
         action: 'sauvegarderAppartement',
         username: currentUser,
         meubles: meublesPlaces,
-        planchers: planchersPieces
+        planchers: planchersPieces,
+        murs: papiersPeintsMurs,
+        fenetres: fenetresMurs
     };
 
     fetch(APPS_SCRIPT_WEBAPP_URL, {
@@ -568,7 +586,7 @@ function sauvegarderAppartementDansSheet() {
     })
     .then(res => res.json())
     .then(data => {
-        if (data.success) console.log("✅ Appartement sauvegardé !");
+        if (data.success) console.log("✅ Appartement et Murs sauvegardés !");
     })
     .catch(err => console.error("⚠️ Erreur sauvegarde :", err));
 }
@@ -592,6 +610,8 @@ function chargerAppartementDepuisSheet() {
             if (data.success) {
                 if (data.meubles && Array.isArray(data.meubles)) meublesPlaces = data.meubles;
                 if (data.planchers && typeof data.planchers === 'object') planchersPieces = data.planchers;
+                if (data.murs && typeof data.murs === 'object') papiersPeintsMurs = data.murs;
+                if (data.fenetres && Array.isArray(data.fenetres)) fenetresMurs = data.fenetres;
                 if (data.achats && Array.isArray(data.achats)) itemsDebloques = data.achats;
                 console.log("✅ Appartement et compte chargés !");
             }
