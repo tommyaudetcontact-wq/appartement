@@ -61,10 +61,13 @@ function creerInstancePeer(roomId) {
         connections[guestId] = conn;
 
         conn.on('open', () => {
+            // ENVOI DE L'ÉTAT COMPLET DU MONDE (PLANCHERS, MURS, MEUBLES & FENÊTRES)
             conn.send({
                 type: 'INIT_STATE',
                 planchers: typeof planchersPieces !== 'undefined' ? planchersPieces : {},
+                murs: typeof papiersPeintsMurs !== 'undefined' ? papiersPeintsMurs : {},
                 meubles: typeof meublesPlaces !== 'undefined' ? meublesPlaces : [],
+                fenetres: typeof fenetresMurs !== 'undefined' ? fenetresMurs : [],
                 permissionEdition: typeof permissionEditionInvite !== 'undefined' ? permissionEditionInvite : false,
                 owner: currentUser
             });
@@ -178,7 +181,9 @@ function envoyerDonneesMulti(data) {
 function traiterDonneesReseau(data, conn) {
     if (data.type === 'INIT_STATE') {
         if (data.planchers) planchersPieces = data.planchers;
+        if (data.murs) papiersPeintsMurs = data.murs;
         if (data.meubles) meublesPlaces = data.meubles;
+        if (data.fenetres) fenetresMurs = data.fenetres;
         if (typeof permissionEditionInvite !== 'undefined') {
             permissionEditionInvite = !!data.permissionEdition;
         }
@@ -225,6 +230,10 @@ function traiterDonneesReseau(data, conn) {
     }
     else if (data.type === 'PLANCHER_UPDATE') {
         if (typeof planchersPieces !== 'undefined') planchersPieces[data.pieceId] = data.texture;
+        if (isHost) retransmettreATous(data, conn.peer);
+    }
+    else if (data.type === 'MUR_UPDATE') {
+        if (typeof papiersPeintsMurs !== 'undefined') papiersPeintsMurs[data.murId] = data.texture;
         if (isHost) retransmettreATous(data, conn.peer);
     }
 }
