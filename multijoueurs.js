@@ -6,20 +6,28 @@ let myPeer = null;
 let isHost = true;
 let hostConn = null;
 let connections = {};
-let appartementProprietaire = ""; // Déclaration propre sans lire currentUser immédiatement
+let appartementProprietaire = "";
 
 function initialiserReseauApartment() {
-    // Récupération sécurisée du nom d'utilisateur
     if (typeof currentUser === 'undefined' || !currentUser) {
         currentUser = localStorage.getItem('brawlUser') || "Joueur_" + Math.floor(Math.random()*1000);
     }
     
     appartementProprietaire = currentUser;
 
-    // Room ID unique par joueur
-    let myRoomId = "brawl-apt-" + currentUser.toLowerCase();
+    // Nettoyer si une instance précédente existe
+    if (myPeer && !myPeer.destroyed) {
+        myPeer.destroy();
+    }
 
-    myPeer = new Peer(myRoomId);
+    // Room ID basé sur le nom d'utilisateur avec gestion de secours si déjà pris
+    let baseRoomId = "brawl-apt-" + currentUser.toLowerCase().trim().replace(/\s+/g, '_');
+
+    creerInstancePeer(baseRoomId);
+}
+
+function creerInstancePeer(roomId) {
+    myPeer = new Peer(roomId);
 
     myPeer.on('open', (id) => {
         isHost = true;
@@ -33,6 +41,19 @@ function initialiserReseauApartment() {
 
     myPeer.on('error', (err) => {
         console.warn("⚠️ PeerJS Note:", err.type);
+
+        // Si l'ID est déjà utilisé, tenter de ré-instancier avec un ID unique secondaire
+        if (err.type === 'unavailable-id') {
+            let fallbackId = roomId + "-" + Math.random().toString(36).substring(2, 6);
+            console.log("🔄 Tentative de connexion avec ID unique : " + fallbackId);
+            setTimeout(() => {
+                creerInstancePeer(fallbackId);
+            }, 500);
+        } else if (err.type === 'disconnected') {
+            if (myPeer && !myPeer.destroyed) {
+                myPeer.reconnect();
+            }
+        }
     });
 
     myPeer.on('connection', (conn) => {
@@ -72,15 +93,26 @@ function annencerPresenceEnLigne() {
 }
 
 function visiterAppartement(targetUsername) {
+    if (!myPeer || myPeer.disconnected || myPeer.destroyed) {
+        alert("⚠️ Votre connexion au réseau multijoueur est en cours... Réessayez dans 2 secondes.");
+        initialiserReseauApartment();
+        return;
+    }
+
     if (targetUsername.toLowerCase() === currentUser.toLowerCase()) {
         retournerMonAppartement();
         return;
     }
 
-    let targetRoomId = "brawl-apt-" + targetUsername.toLowerCase();
+    let targetRoomId = "brawl-apt-" + targetUsername.toLowerCase().trim().replace(/\s+/g, '_');
     if (hostConn) hostConn.close();
 
     hostConn = myPeer.connect(targetRoomId);
+
+    if (!hostConn) {
+        alert("⚠️ Impossible d'établir la connexion.");
+        return;
+    }
 
     hostConn.on('open', () => {
         isHost = false;
@@ -92,6 +124,7 @@ function visiterAppartement(targetUsername) {
             username: currentUser, 
             x: player.x, y: player.y, 
             color: player.color,
+            skin: typeof skinEquipe !== 'undefined' ? skinEquipe : null,
             besoins: typeof besoins !== 'undefined' ? besoins : {}
         });
 
@@ -168,12 +201,19 @@ function traiterDonneesReseau(data, conn) {
                     x: data.x, 
                     y: data.y, 
                     color: data.color || '#ff0055',
+                    skin: data.skin || null,
+                    dir: data.dir || 'down',
+                    moving: data.moving || false,
+                    animTimer: 0,
                     actionEnCours: data.actionEnCours || false,
                     interactionType: data.interactionType || null
                 };
             } else {
                 otherPlayers[pId].x = data.x; 
                 otherPlayers[pId].y = data.y;
+                otherPlayers[pId].skin = data.skin || otherPlayers[pId].skin;
+                otherPlayers[pId].dir = data.dir || otherPlayers[pId].dir;
+                otherPlayers[pId].moving = data.moving || false;
                 otherPlayers[pId].actionEnCours = data.actionEnCours || false;
                 otherPlayers[pId].interactionType = data.interactionType || null;
             }
