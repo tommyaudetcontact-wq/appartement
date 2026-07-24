@@ -60,6 +60,7 @@ function basculerPermissionInvite() {
     });
 }
 
+// OUVRE LA BOUTIQUE DIRECTEMENT SUR L'ÉCRAN DES CATÉGORIES
 function ouvrirBoutique() {
     if (!peutEditer()) {
         alert("🔒 L'hôte n'a pas autorisé la modification de l'appartement.");
@@ -68,9 +69,38 @@ function ouvrirBoutique() {
     if (!modeEditeur) basculerModeEditeur();
     
     rafraichirDonneesJoueur().then(() => {
+        afficherEcranCategories();
         if (!shopModalInst) shopModalInst = new bootstrap.Modal(document.getElementById('shopModal'));
         shopModalInst.show();
     });
+}
+
+// BASCULE VERS L'ÉCRAN DES CATÉGORIES
+function afficherEcranCategories() {
+    let catScreen = document.getElementById('shopCategoriesScreen');
+    let itemScreen = document.getElementById('shopItemsScreen');
+    let btnRetour = document.getElementById('btnRetourCategories');
+    let titleHeader = document.getElementById('shopTitleHeader');
+
+    if (catScreen) catScreen.classList.remove('d-none');
+    if (itemScreen) itemScreen.classList.add('d-none');
+    if (btnRetour) btnRetour.classList.add('d-none');
+    if (titleHeader) titleHeader.innerText = "🛍️ BOUTIQUE";
+}
+
+// CLIC SUR UNE CATÉGORIE : PASSE EN PLEIN ÉCRAN SUR LES ITEMS
+function ouvrirCategorieBoutique(nomDossier, nomTitre) {
+    let catScreen = document.getElementById('shopCategoriesScreen');
+    let itemScreen = document.getElementById('shopItemsScreen');
+    let btnRetour = document.getElementById('btnRetourCategories');
+    let titleHeader = document.getElementById('shopTitleHeader');
+
+    if (catScreen) catScreen.classList.add('d-none');
+    if (itemScreen) itemScreen.classList.remove('d-none');
+    if (btnRetour) btnRetour.classList.remove('d-none');
+    if (titleHeader) titleHeader.innerText = nomTitre;
+
+    chargerDossierGitHub(nomDossier);
 }
 
 function rafraichirDonneesJoueur() {
@@ -95,8 +125,10 @@ function rafraichirDonneesJoueur() {
 }
 
 function misaJourAffichageArgent() {
-    const el = document.getElementById('shopUserMoney');
-    if (el) el.innerText = `${argentJoueur.toFixed(2)} $`;
+    const elShop = document.getElementById('shopUserMoney');
+    if (elShop) elShop.innerText = `${argentJoueur.toFixed(2)} $`;
+    const elHud = document.getElementById('hudUserMoney');
+    if (elHud) elHud.innerText = `${argentJoueur.toFixed(2)} $`;
 }
 
 function extrairePrixEtNom(fileName, isSkin = false) {
@@ -114,7 +146,7 @@ function extrairePrixEtNom(fileName, isSkin = false) {
 
 function chargerSkinsGitHub() {
     let container = document.getElementById('shopContainer');
-    container.innerHTML = `<div class="col-12 text-warning py-4 fw-bold fs-5">⏳ Chargement des Skins...</div>`;
+    container.innerHTML = `<div class="col-12 text-warning py-4 fw-bold fs-5 text-center">⏳ Chargement des Skins...</div>`;
 
     let urlApiGithub = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_SPRITES}/contents/skins`;
 
@@ -123,14 +155,14 @@ function chargerSkinsGitHub() {
         .then(items => {
             container.innerHTML = "";
             if (!Array.isArray(items)) {
-                container.innerHTML = `<div class="col-12 text-muted py-4">Aucun skin trouvé dans /skins.</div>`;
+                container.innerHTML = `<div class="col-12 text-muted py-4 text-center">Aucun skin trouvé dans /skins.</div>`;
                 return;
             }
 
             let dossiersSkins = items.filter(item => item.type === 'dir');
 
             if (dossiersSkins.length === 0) {
-                container.innerHTML = `<div class="col-12 text-muted py-4">Ajoutez des dossiers de skins dans /skins (ex: /skins/Zoey).</div>`;
+                container.innerHTML = `<div class="col-12 text-muted py-4 text-center">Ajoutez des dossiers de skins dans /skins (ex: /skins/Zoey).</div>`;
                 return;
             }
 
@@ -169,7 +201,7 @@ function chargerSkinsGitHub() {
             });
         })
         .catch(err => {
-            container.innerHTML = `<div class="col-12 text-danger py-4">⚠️ Dossier /skins introuvable.</div>`;
+            container.innerHTML = `<div class="col-12 text-danger py-4 text-center">⚠️ Dossier /skins introuvable.</div>`;
         });
 }
 
@@ -177,7 +209,6 @@ function equiperSkin(skinName) {
     skinEquipe = skinName;
     player.skin = skinName;
     
-    // Sauvegarde automatique du dernier skin équipé
     if (currentUser) {
         localStorage.setItem('brawlSkin_' + currentUser, skinName);
     }
@@ -237,7 +268,7 @@ function chargerDossierGitHub(nomDossier) {
     }
 
     let container = document.getElementById('shopContainer');
-    container.innerHTML = `<div class="col-12 text-warning py-4 fw-bold fs-5">⏳ Chargement des articles...</div>`;
+    container.innerHTML = `<div class="col-12 text-warning py-4 fw-bold fs-5 text-center">⏳ Chargement des articles...</div>`;
 
     let urlApiGithub = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_SPRITES}/contents/${nomDossier}`;
 
@@ -246,7 +277,7 @@ function chargerDossierGitHub(nomDossier) {
         .then(fichiers => {
             container.innerHTML = "";
             if (!Array.isArray(fichiers)) {
-                container.innerHTML = `<div class="col-12 text-muted py-4">Aucun contenu trouvé.</div>`;
+                container.innerHTML = `<div class="col-12 text-muted py-4 text-center">Aucun contenu trouvé.</div>`;
                 return;
             }
 
@@ -282,7 +313,7 @@ function chargerDossierGitHub(nomDossier) {
             });
         })
         .catch(err => {
-            container.innerHTML = `<div class="col-12 text-danger py-4">⚠️ Erreur de chargement.</div>`;
+            container.innerHTML = `<div class="col-12 text-danger py-4 text-center">⚠️ Erreur de chargement.</div>`;
         });
 }
 
