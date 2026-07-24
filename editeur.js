@@ -1,5 +1,5 @@
 // ==========================================
-// MODULE ÉDITEUR (Boutique, Achats & Synchro Argent)
+// MODULE ÉDITEUR & BOUTIQUE (Meubles, Sols, Skins)
 // ==========================================
 
 let modeEditeur = false;
@@ -10,9 +10,10 @@ let pieceCibleEdition = null;
 
 let permissionEditionInvite = false;
 
-// Variables pour le solde et les achats
+// Variables pour le solde, les achats et les skins
 let argentJoueur = 0;
 let itemsDebloques = [];
+let skinEquipe = null;
 
 function peutEditer() {
     return isHost || permissionEditionInvite;
@@ -66,14 +67,12 @@ function ouvrirBoutique() {
     }
     if (!modeEditeur) basculerModeEditeur();
     
-    // Rafraîchir les données bancaires avant d'ouvrir la fenêtre
     rafraichirDonneesJoueur().then(() => {
         if (!shopModalInst) shopModalInst = new bootstrap.Modal(document.getElementById('shopModal'));
         shopModalInst.show();
     });
 }
 
-// Récupère l'argent et la liste des meubles débloqués
 function rafraichirDonneesJoueur() {
     if (!currentUser || typeof APPS_SCRIPT_WEBAPP_URL === 'undefined' || !APPS_SCRIPT_WEBAPP_URL) {
         return Promise.resolve();
@@ -100,19 +99,143 @@ function misaJourAffichageArgent() {
     if (el) el.innerText = `${argentJoueur.toFixed(2)} $`;
 }
 
-// FORCER TOUS LES ARTICLES À 2.00 $
-function extrairePrixEtNom(fileName) {
-    // Nettoie le nom de fichier (enlève le $2 initial si présent et l'extension .png/.jpg)
+function extrairePrixEtNom(fileName, isSkin = false) {
     let nomSansExtension = fileName.replace(/\.[^/.]+$/, "");
     let nomPropre = nomSansExtension.replace(/^\$[\d\.]+\s*/, "");
 
+    let match = fileName.match(/^\$([\d\.]+)/);
+    let prixCalcule = match ? parseFloat(match[1]) : (isSkin ? 30.0 : 2.0);
+
     return {
-        prix: 2.0, // Tout coûte 2$
+        prix: prixCalcule,
         nomPropre: nomPropre
     };
 }
 
+function chargerSkinsGitHub() {
+    let container = document.getElementById('shopContainer');
+    container.innerHTML = `<div class="col-12 text-warning py-4 fw-bold fs-5">⏳ Chargement des Skins...</div>`;
+
+    let urlApiGithub = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_SPRITES}/contents/skins`;
+
+    fetch(urlApiGithub)
+        .then(res => res.json())
+        .then(items => {
+            container.innerHTML = "";
+            if (!Array.isArray(items)) {
+                container.innerHTML = `<div class="col-12 text-muted py-4">Aucun skin trouvé dans /skins.</div>`;
+                return;
+            }
+
+            let dossiersSkins = items.filter(item => item.type === 'dir');
+
+            if (dossiersSkins.length === 0) {
+                container.innerHTML = `<div class="col-12 text-muted py-4">Ajoutez des dossiers de skins dans /skins (ex: /skins/Zoey).</div>`;
+                return;
+            }
+
+            dossiersSkins.forEach(d => {
+                let skinName = d.name;
+                let previewImgUrl = `${ASSETS_BASE_URL}skins/${skinName}/${skinName}Face1.png`;
+                let info = extrairePrixEtNom(skinName, true);
+                let itemKey = "skin_" + skinName;
+                let estAchete = itemsDebloques.includes(itemKey) || itemsDebloques.includes(skinName);
+                let estEquipe = (skinEquipe === skinName);
+
+                let cardClass = estAchete ? 'meuble-card' : 'meuble-card item-locked';
+                let actionBtn = '';
+
+                if (estAchete) {
+                    if (estEquipe) {
+                        actionBtn = `<button class="btn brawl-btn btn-green btn-lg w-100 mt-2 disabled">ÉQUIPÉ ✅</button>`;
+                    } else {
+                        actionBtn = `<button class="btn brawl-btn btn-yellow btn-lg w-100 mt-2" onclick="equiperSkin('${skinName}')">ÉQUIPER 👤</button>`;
+                    }
+                } else {
+                    let canAfford = argentJoueur >= info.prix;
+                    let btnClass = canAfford ? 'btn-green' : 'btn-pink disabled';
+                    actionBtn = `<button class="btn brawl-btn ${btnClass} btn-lg w-100 mt-2" onclick="acheterSkin('${skinName}', ${info.prix})">ACHETER 🛒 (${info.prix} $)</button>`;
+                }
+
+                container.innerHTML += `
+                    <div class="col">
+                        <div class="${cardClass}">
+                            ${!estAchete ? `<div class="lock-badge">🔒 ${info.prix} $</div>` : ''}
+                            <img src="${previewImgUrl}" class="meuble-img-preview skin-preview-img" onerror="this.src='https://via.placeholder.com/100?text=Skin'">
+                            <div class="fw-bold text-white text-truncate fs-6 text-center mt-1">${skinName}</div>
+                            ${actionBtn}
+                        </div>
+                    </div>`;
+            });
+        })
+        .catch(err => {
+            container.innerHTML = `<div class="col-12 text-danger py-4">⚠️ Dossier /skins introuvable.</div>`;
+        });
+}
+
+function equiperSkin(skinName) {
+    skinEquipe = skinName;
+    player.skin = skinName;
+    
+    // Sauvegarde automatique du dernier skin équipé
+    if (currentUser) {
+        localStorage.setItem('brawlSkin_' + currentUser, skinName);
+    }
+    
+    if (shopModalInst) shopModalInst.hide();
+    
+    envoyerDonneesMulti({
+        type: 'POS_UPDATE',
+        username: currentUser,
+        x: Math.round(player.x),
+        y: Math.round(player.y),
+        color: player.color,
+        skin: skinEquipe,
+        actionEnCours: typeof actionEnCours !== 'undefined' ? actionEnCours : false,
+        interactionType: typeof interactionActive !== 'undefined' ? interactionActive : null
+    });
+}
+
+function acheterSkin(skinName, prix) {
+    if (argentJoueur < prix) {
+        alert("💵 Pas assez d'argent pour acheter ce skin !");
+        return;
+    }
+
+    let itemKey = "skin_" + skinName;
+
+    let payload = {
+        action: 'acheterItem',
+        username: currentUser,
+        itemName: itemKey,
+        prix: prix
+    };
+
+    fetch(APPS_SCRIPT_WEBAPP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            argentJoueur = data.argent;
+            itemsDebloques = data.achats || [];
+            misaJourAffichageArgent();
+            equiperSkin(skinName);
+        } else {
+            alert("⚠️ " + (data.error || "Erreur lors de l'achat."));
+        }
+    })
+    .catch(err => alert("⚠️ Erreur réseau lors de l'achat."));
+}
+
 function chargerDossierGitHub(nomDossier) {
+    if (nomDossier === 'skins') {
+        chargerSkinsGitHub();
+        return;
+    }
+
     let container = document.getElementById('shopContainer');
     container.innerHTML = `<div class="col-12 text-warning py-4 fw-bold fs-5">⏳ Chargement des articles...</div>`;
 
@@ -131,7 +254,7 @@ function chargerDossierGitHub(nomDossier) {
 
             images.forEach(f => {
                 let imgPagesUrl = `${ASSETS_BASE_URL}${nomDossier}/${f.name}`;
-                let info = extrairePrixEtNom(f.name);
+                let info = extrairePrixEtNom(f.name, false);
                 let estAchete = info.prix === 0 || itemsDebloques.includes(f.name);
 
                 let cardClass = estAchete ? 'meuble-card' : 'meuble-card item-locked';
@@ -422,7 +545,12 @@ function sauvegarderAppartementDansSheet() {
 function chargerAppartementDepuisSheet() {
     if (!currentUser || typeof APPS_SCRIPT_WEBAPP_URL === 'undefined' || !APPS_SCRIPT_WEBAPP_URL) return;
 
-    // Charger l'argent et les achats immédiatement au démarrage
+    let savedSkin = localStorage.getItem('brawlSkin_' + currentUser);
+    if (savedSkin) {
+        skinEquipe = savedSkin;
+        if (typeof player !== 'undefined') player.skin = savedSkin;
+    }
+
     rafraichirDonneesJoueur();
 
     let url = `${APPS_SCRIPT_WEBAPP_URL}?action=chargerAppartement&username=${encodeURIComponent(currentUser)}`;
