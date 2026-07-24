@@ -51,9 +51,12 @@
             touch-action: none;
         }
 
-        canvas { display: block; width: 100vw; height: 100vh; background: #1e1e1e; }
+        canvas { 
+            display: block; width: 100vw; height: 100vh; background: #1e1e1e; 
+            image-rendering: crisp-edges; image-rendering: -webkit-optimize-contrast;
+        }
 
-        /* HUD BESOINS & AFFICHAGE SOLDE (AGRANDI & LISIBLE) */
+        /* HUD BESOINS & AFFICHAGE SOLDE */
         #sims-hud {
             position: absolute; top: 10px; left: 10px;
             background: rgba(10, 5, 25, 0.92);
@@ -62,7 +65,6 @@
             z-index: 15; width: 165px; pointer-events: none;
         }
         
-        /* SOLDE D'ARGENT EN VERT TRÈS GRAS ET TRÈS LISIBLE */
         .money-badge-hud {
             background: rgba(0, 0, 0, 0.8);
             border: 2px solid var(--brawl-green);
@@ -84,7 +86,6 @@
         .need-bar-fill { height: 100%; width: 100%; transition: width 0.2s linear, background-color 0.3s; }
         .need-label { font-size: 0.75rem; font-weight: 900; margin-bottom: 2px; display: flex; justify-content: space-between; text-shadow: 1px 1px 0px #000; }
 
-        /* ANIMATION CLIGNOTANTE EN ROUGE (<25%) */
         @keyframes fadeRedAlert {
             0% { background-color: #ff0055; opacity: 1.0; }
             50% { background-color: #990022; opacity: 0.4; }
@@ -114,7 +115,7 @@
         }
         .action-progress-fill { height: 100%; width: 0%; background: var(--brawl-green); transition: width 0.05s linear; }
 
-        /* BOUTONS HUD HAUT DROITE AGRANDIS ET BIEN LISIBLES */
+        /* BOUTONS HUD HAUT DROITE */
         .top-right-menu {
             position: absolute; top: 10px; right: 10px;
             z-index: 20; display: flex; gap: 6px; align-items: center;
@@ -181,7 +182,7 @@
             border-radius: 15px; padding: 10px; z-index: 20; display: none; pointer-events: auto;
         }
 
-        /* BOUTIQUE */
+        /* BOUTIQUE PLEIN ÉCRAN A 2 ÉCRANS */
         .shop-modal.modal { padding: 0 !important; }
         .shop-modal .modal-dialog { 
             max-width: 100vw !important; width: 100vw !important; 
@@ -191,23 +192,8 @@
             height: 100vh !important; border-radius: 0 !important;
             background: radial-gradient(circle, #2a085c 0%, #0f0326 100%);
             border: none; display: flex; flex-direction: column; 
-            padding: 12px !important;
+            padding: 14px !important;
             touch-action: pan-y !important;
-        }
-        
-        .category-stack { 
-            display: flex; flex-direction: column; gap: 6px; 
-            max-height: 30vh; overflow-y: auto; padding: 4px;
-            touch-action: pan-y !important;
-            -webkit-overflow-scrolling: touch;
-        }
-        .category-stack .btn { width: 100%; text-align: center; font-size: 1rem; padding: 8px; }
-
-        #shopContainer {
-            overflow-y: auto !important;
-            touch-action: pan-y !important;
-            -webkit-overflow-scrolling: touch;
-            padding-bottom: 20px;
         }
 
         .meuble-card {
@@ -220,7 +206,7 @@
             position: absolute; top: 4px; right: 4px; background: var(--brawl-pink); color: white;
             font-family: 'Luckiest Guy', cursive; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; border: 1px solid #000;
         }
-        .meuble-img-preview { max-width: 100%; height: 55px; object-fit: contain; display: block; margin: 0 auto 4px auto; }
+        .meuble-img-preview { max-width: 100%; height: 60px; object-fit: contain; display: block; margin: 0 auto 4px auto; }
         
         .skin-preview-img {
             height: 110px !important;
@@ -256,7 +242,6 @@
             <div id="joystick-knob"></div>
         </div>
 
-        <!-- HUD BESOINS AVEC TEXTES PLUS GROS ET ARGENT VERT TRÈS GRAS -->
         <div id="sims-hud">
             <div class="money-badge-hud">
                 💰 <span id="hudUserMoney">0.00 $</span>
@@ -273,7 +258,6 @@
             <div class="need-bar-container"><div id="barHygiene" class="need-bar-fill bg-success" style="width: 100%;"></div></div>
         </div>
 
-        <!-- BOUTON D'ACTION AVEC BARRE DE CHARGEMENT -->
         <div id="interaction-prompt">
             <button id="btnInteraction" onclick="executerInteraction()" class="btn brawl-btn btn-green fs-6">
                 [E] CUISINER 🍳
@@ -283,7 +267,6 @@
             </div>
         </div>
 
-        <!-- BOUTONS DU MENU HAUT DROITE PLUS GROS -->
         <div class="top-right-menu">
             <span id="netRoleBadge" class="badge bg-warning text-dark brawl-font px-2 py-2" style="border: 2px solid #000; font-size: 0.8rem;">MON APPART 🏠</span>
             <button onclick="ouvrirListeJoueursEnLigne()" class="btn brawl-btn btn-green">🌐 JOUEURS</button>
@@ -317,37 +300,45 @@
         </div>
     </div>
 
-    <!-- MODALE BOUTIQUE -->
+    <!-- MODALE BOUTIQUE PLEIN ÉCRAN À 2 ÉCRANS -->
     <div class="modal fade shop-modal" id="shopModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-secondary">
                     <div>
-                        <h2 class="brawl-font text-warning m-0" style="font-size: 1.6rem;">BOUTIQUE</h2>
-                        <div class="brawl-font text-info" style="font-size: 1rem;">💰 Solde : <span id="shopUserMoney" style="color: #10D010; font-weight:900;">0.00 $</span></div>
+                        <h2 class="brawl-font text-warning m-0 fs-3" id="shopTitleHeader">🛍️ BOUTIQUE</h2>
+                        <div class="brawl-font text-success fs-6" style="color: #10D010 !important;">💰 Solde : <span id="shopUserMoney">0.00 $</span></div>
                     </div>
-                    <button type="button" class="btn brawl-btn btn-pink px-3 py-1 fs-6" data-bs-dismiss="modal">❌ FERMER</button>
+                    <div class="d-flex gap-2">
+                        <button id="btnRetourCategories" onclick="afficherEcranCategories()" class="btn brawl-btn btn-yellow px-3 py-1 fs-6 d-none">⬅️ CATÉGORIES</button>
+                        <button type="button" class="btn brawl-btn btn-pink px-3 py-1 fs-6" data-bs-dismiss="modal">❌ FERMER</button>
+                    </div>
                 </div>
                 
-                <div class="category-stack mb-2">
-                    <button onclick="chargerDossierGitHub('skins')" class="btn brawl-btn btn-pink fs-5 border-light">🎭 SKINS PERSONNAGES ($30)</button>
-                    <button onclick="chargerDossierGitHub('four')" class="btn brawl-btn btn-yellow">🔥 Fours & Cuisinières</button>
-                    <button onclick="chargerDossierGitHub('divant')" class="btn brawl-btn btn-yellow">🛋️ Divans & Canapés</button>
-                    <button onclick="chargerDossierGitHub('lits')" class="btn brawl-btn btn-green">🛏️ Lits</button>
-                    <button onclick="chargerDossierGitHub('tables')" class="btn brawl-btn btn-blue">🪵 Tables</button>
-                    <button onclick="chargerDossierGitHub('commodes')" class="btn brawl-btn btn-yellow">🗄️ Commodes</button>
-                    <button onclick="chargerDossierGitHub('comptoirs')" class="btn brawl-btn btn-green">🍳 Comptoirs</button>
-                    <button onclick="chargerDossierGitHub('douche')" class="btn brawl-btn btn-blue">🚿 Douches</button>
-                    <button onclick="chargerDossierGitHub('toilettes')" class="btn brawl-btn btn-yellow">🚽 Toilettes</button>
-                    <button onclick="chargerDossierGitHub('évier toilettes')" class="btn brawl-btn btn-green">🚰 Éviers</button>
-                    <button onclick="chargerDossierGitHub('plancher')" class="btn brawl-btn btn-blue">🎨 Planchers & Sols</button>
-                    <button onclick="chargerDossierGitHub('TV')" class="btn brawl-btn btn-green">📺 TV</button>
-                    <button onclick="chargerDossierGitHub('plantes')" class="btn brawl-btn btn-blue">🪴 Plantes</button>
-                    <button onclick="chargerDossierGitHub('frigidaire')" class="btn brawl-btn btn-blue">🧊 Frigidaires</button>
+                <!-- ÉCRAN 1 : LISTE DES CATÉGORIES -->
+                <div id="shopCategoriesScreen" class="flex-grow-1 overflow-auto">
+                    <div class="category-stack d-grid gap-2 py-2">
+                        <button onclick="ouvrirCategorieBoutique('skins', '🎭 SKINS PERSONNAGES')" class="btn brawl-btn btn-pink fs-5 py-3">🎭 SKINS PERSONNAGES ($30)</button>
+                        <button onclick="ouvrirCategorieBoutique('four', '🔥 FOURS & CUISINIÈRES')" class="btn brawl-btn btn-yellow fs-5 py-3">🔥 Fours & Cuisinières</button>
+                        <button onclick="ouvrirCategorieBoutique('divant', '🛋️ DIVANS & CANAPÉS')" class="btn brawl-btn btn-yellow fs-5 py-3">🛋️ Divans & Canapés</button>
+                        <button onclick="ouvrirCategorieBoutique('lits', '🛏️ LITS')" class="btn brawl-btn btn-green fs-5 py-3">🛏️ Lits</button>
+                        <button onclick="ouvrirCategorieBoutique('tables', '🪵 TABLES')" class="btn brawl-btn btn-blue fs-5 py-3">🪵 Tables</button>
+                        <button onclick="ouvrirCategorieBoutique('commodes', '🗄️ COMMODES')" class="btn brawl-btn btn-yellow fs-5 py-3">🗄️ Commodes</button>
+                        <button onclick="ouvrirCategorieBoutique('comptoirs', '🍳 COMPTOIRS')" class="btn brawl-btn btn-green fs-5 py-3">🍳 Comptoirs</button>
+                        <button onclick="ouvrirCategorieBoutique('douche', '🚿 DOUCHES')" class="btn brawl-btn btn-blue fs-5 py-3">🚿 Douches</button>
+                        <button onclick="ouvrirCategorieBoutique('toilettes', '🚽 TOILETTES')" class="btn brawl-btn btn-yellow fs-5 py-3">🚽 Toilettes</button>
+                        <button onclick="ouvrirCategorieBoutique('évier toilettes', '𚰠 ÉVIERS')" class="btn brawl-btn btn-green fs-5 py-3">🚰 Éviers</button>
+                        <button onclick="ouvrirCategorieBoutique('plancher', '🎨 PLANCHERS & SOLS')" class="btn brawl-btn btn-blue fs-5 py-3">🎨 Planchers & Sols</button>
+                        <button onclick="ouvrirCategorieBoutique('TV', '📺 TÉLÉVISIONS')" class="btn brawl-btn btn-green fs-5 py-3">📺 TV</button>
+                        <button onclick="ouvrirCategorieBoutique('plantes', '🪴 PLANTES')" class="btn brawl-btn btn-blue fs-5 py-3">🪴 Plantes</button>
+                        <button onclick="ouvrirCategorieBoutique('frigidaire', '🧊 FRIGIDAIRES')" class="btn brawl-btn btn-blue fs-5 py-3">🧊 Frigidaires</button>
+                    </div>
                 </div>
 
-                <div id="shopContainer" class="row row-cols-2 row-cols-sm-3 row-cols-md-4 g-2 flex-grow-1">
-                    <div class="col-12 text-muted text-center py-4">Cliquez sur une catégorie ci-dessus.</div>
+                <!-- ÉCRAN 2 : LISTE DES ITEMS -->
+                <div id="shopItemsScreen" class="flex-grow-1 overflow-auto d-none">
+                    <div id="shopContainer" class="row row-cols-2 row-cols-sm-3 row-cols-md-4 g-2 pt-2">
+                    </div>
                 </div>
             </div>
         </div>
@@ -530,8 +521,9 @@
 
         let isDraggingMeuble = false;
 
+// DRAG DÉCALÉ À 80PX AU-DESSUS DU DOIGT POUR UNE VISIBILITÉ TOTALE SUR MOBILE
         function ObtenirCoordonneesMonde(clientX, clientY) {
-            let decalageY = 30;
+            let decalageY = 100; // Augmenté à 80px pour sortir complètement de sous le doigt
             return {
                 x: player.x + (clientX - canvas.width / 2),
                 y: player.y + ((clientY - decalageY) - canvas.height / 2)
@@ -618,14 +610,23 @@
         }
 
         function attribuerRecompenseBonSoin() {
-            if (typeof argentJoueur !== 'undefined' && typeof APPS_SCRIPT_WEBAPP_URL !== 'undefined') {
+            if (typeof APPS_SCRIPT_WEBAPP_URL !== 'undefined' && APPS_SCRIPT_WEBAPP_URL && currentUser) {
                 let gain = 0.10;
-                let nouveauSolde = argentJoueur + gain;
+                
+                if (typeof argentJoueur !== 'undefined') {
+                    argentJoueur += gain;
+                } else {
+                    argentJoueur = gain;
+                }
 
-                argentJoueur = nouveauSolde;
-                if (typeof misaJourAffichageArgent === 'function') misaJourAffichageArgent();
+                if (typeof misaJourAffichageArgent === 'function') {
+                    misaJourAffichageArgent();
+                }
 
-                fetch(`${APPS_SCRIPT_WEBAPP_URL}?action=attribuerArgent&username=${encodeURIComponent(currentUser)}&money=0.10`);
+                fetch(`${APPS_SCRIPT_WEBAPP_URL}?action=attribuerArgent&username=${encodeURIComponent(currentUser)}&money=0.10`)
+                    .then(res => res.json())
+                    .then(data => console.log("💰 +0.10$ enregistrés !"))
+                    .catch(err => console.error("⚠️ Erreur ajout argent Sheet :", err));
             }
         }
 
@@ -817,11 +818,11 @@
 
             meublesPlaces.forEach(m => {
                 let img = chargerImage(m.url);
-                let curW = m.w * (m.scale || 1);
-                let curH = m.h * (m.scale || 1);
+                let curW = Math.round(m.w * (m.scale || 1));
+                let curH = Math.round(m.h * (m.scale || 1));
 
                 ctx.save();
-                ctx.translate(m.x, m.y);
+                ctx.translate(Math.round(m.x), Math.round(m.y));
                 ctx.rotate((m.rotation || 0) * Math.PI / 180);
 
                 if (img && img.complete && img.naturalWidth !== 0) {
@@ -834,11 +835,11 @@
             });
 
             if (meubleEnModePlacement) {
-                let curW = meubleEnModePlacement.w * meubleEnModePlacement.scale;
-                let curH = meubleEnModePlacement.h * meubleEnModePlacement.scale;
+                let curW = Math.round(meubleEnModePlacement.w * meubleEnModePlacement.scale);
+                let curH = Math.round(meubleEnModePlacement.h * meubleEnModePlacement.scale);
 
                 ctx.save();
-                ctx.translate(curseurMouse.x, curseurMouse.y);
+                ctx.translate(Math.round(curseurMouse.x), Math.round(curseurMouse.y));
                 ctx.rotate(meubleEnModePlacement.rotation * Math.PI / 180);
                 ctx.globalAlpha = 0.8;
 
@@ -859,7 +860,7 @@
 
         function dessinerPersonnage(p, name, isOther = false) {
             ctx.save();
-            ctx.translate(p.x, p.y);
+            ctx.translate(Math.round(p.x), Math.round(p.y));
 
             let skinActif = p.skin || (p === player ? skinEquipe : null);
 
@@ -890,6 +891,9 @@
                         drawW = BASE_H * ratio;
                     }
 
+                    drawW = Math.round(drawW);
+                    drawH = Math.round(drawH);
+
                     ctx.drawImage(imgSkin, -drawW / 2, -drawH / 2, drawW, drawH);
                 } else {
                     dessinerPersonnageVectoriel(p);
@@ -910,11 +914,11 @@
                 ctx.fillStyle = "#FFF200";
                 ctx.font = "bold 14px Montserrat";
                 ctx.textAlign = "center";
-                ctx.fillText(icone, p.x, p.y - 52);
+                ctx.fillText(icone, Math.round(p.x), Math.round(p.y) - 52);
             }
 
             ctx.fillStyle = "#000"; ctx.font = "bold 10px Montserrat"; ctx.textAlign = "center";
-            ctx.fillText(name.toUpperCase(), p.x, p.y - 38);
+            ctx.fillText(name.toUpperCase(), Math.round(p.x), Math.round(p.y) - 38);
         }
 
         function dessinerPersonnageVectoriel(p) {
@@ -974,7 +978,7 @@
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.save();
-            ctx.translate(canvas.width / 2 - player.x, canvas.height / 2 - player.y);
+            ctx.translate(Math.round(canvas.width / 2 - player.x), Math.round(canvas.height / 2 - player.y));
 
             dessinerAppartement();
 
